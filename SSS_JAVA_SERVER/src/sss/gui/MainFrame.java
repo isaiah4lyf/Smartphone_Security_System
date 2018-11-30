@@ -2,6 +2,7 @@ package sss.gui;
 import java.awt.*;
 import javax.swing.*;
 
+import sss.matlabManager.MatEngineManager;
 import sss.server.Server;
 
 import java.io.*;
@@ -10,8 +11,9 @@ public class MainFrame extends JFrame{
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private TextArea console_Like;
+	private TextArea consoleLike;
 	private String dataAbsolutePath;
+	private MatEngineManager MatEngines;
 	public MainFrame()
 	{
 		try 
@@ -22,9 +24,25 @@ public class MainFrame extends JFrame{
 			e.printStackTrace();
 		}
 		setLayout(new GridLayout(1,1));
-		console_Like = new TextArea();
-		console_Like.setEditable(false);
-		add(console_Like);
+		consoleLike = new TextArea();
+		consoleLike.setEditable(false);
+		add(consoleLike);
+		
+		//Starting MATLAB Engines
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				MatEngines = new MatEngineManager(consoleLike);
+    			MatEngines.setMat1InUse(true);
+    			MatEngines.setMat2InUse(true);
+    			MatEngines.setMat3InUse(true);
+    			MatEngines.setMat4InUse(true);  
+				MatEngines.StartMATEngines();
+			}
+			
+		}).start();
 		
 		//Start Server Thread
 		new Thread(new Runnable() {
@@ -33,7 +51,11 @@ public class MainFrame extends JFrame{
                 try {
             		try 
             		{
-            			new Server(8060,"ccs",console_Like);
+            			while(MatEngines.isMat1InUse() == true || MatEngines.isMat2InUse() == true || MatEngines.isMat3InUse() == true || MatEngines.isMat4InUse() == true){
+            				consoleLike.append("Initializing MATLAB Engines.......\n");
+            				Thread.sleep(10000);
+            			};
+            			new Server(8060,MatEngines,"ccs",consoleLike);
             		} catch (Exception e) {
             			// TODO Auto-generated catch block
             			e.printStackTrace();
@@ -45,8 +67,9 @@ public class MainFrame extends JFrame{
             }
         }).start();
         
+
 		
-		console_Like.append(dataAbsolutePath + "\n");
+		consoleLike.append(dataAbsolutePath + "\n");
 	}
 
 }

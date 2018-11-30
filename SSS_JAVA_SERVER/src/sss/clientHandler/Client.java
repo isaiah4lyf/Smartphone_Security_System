@@ -4,26 +4,33 @@ import java.awt.TextArea;
 import java.io.*;
 import java.net.*;
 
+import com.mathworks.engine.MatlabEngine;
+
+import sss.matlabManager.MatEngineManager;
+
 public class Client implements Runnable{
 	private Socket connectionToClient;
 	private DataInputStream in;
 	private DataOutputStream out;
 	private String URL;
-	private TextArea console_Like;
+	private TextArea consoleLike;
 	private String dataAbsolutePath;
-	public Client(Socket socketConnectionToClient,String URL,TextArea console_Like)
+	private MatEngineManager MatEngines;
+	public Client(Socket socketConnectionToClient,String URL,TextArea console_Like,MatEngineManager MatEngines)
 	{
 		this.connectionToClient = socketConnectionToClient;
 		this.URL = URL;
-		this.console_Like = console_Like;
+		this.consoleLike = console_Like;
+		this.MatEngines = MatEngines;
 		try
 		{
 			in = new DataInputStream(connectionToClient.getInputStream());
 			out = new DataOutputStream(connectionToClient.getOutputStream());
 			dataAbsolutePath  = new File(".").getCanonicalPath() + "/data";
+
 			
 		}
-		catch (IOException ex)
+		catch (Exception ex)
 		{
 			ex.printStackTrace();
 		}
@@ -32,22 +39,34 @@ public class Client implements Runnable{
 	@Override
 	public void run()
 	{
-		console_Like.append("Processing client commands \n");
+		consoleLike.append("Processing client commands \n");
 		boolean processing = true;
 		try
 		{
 			while (processing)
 			{
 				String command = in.readUTF();
-				console_Like.append(command + "\n");
+				consoleLike.append(command + "\n");
 				try 
 				{
 					switch (command)
 					{
 						case "REG":
 							processing = false;		
-							console_Like.append(dataAbsolutePath + "\n");
-							console_Like.append(URL + "\n");
+							consoleLike.append(dataAbsolutePath + "\n");
+							consoleLike.append(URL + "\n");
+							
+							break;
+						case "LOGIN":
+							processing = false;
+							MatlabEngine matEng = getMAT();
+							matEng.eval("p = pi;", null, null);
+							consoleLike.append(matEng.getVariable("p") + "\n");
+							double pi = matEng.getVariable("p");
+							sendMessage(String.valueOf(pi));
+							close();
+							MatEngines.ReleaseMATEngine( matEng.getVariable("MAT"));
+							consoleLike.append("Releasing MATLAB Enigne " + matEng.getVariable("MAT") + ".....\n");
 							break;
 					}
 				}
@@ -77,7 +96,28 @@ public class Client implements Runnable{
 	    return n;
 	}  
 	
-	
+	*/
+	private MatlabEngine getMAT()
+	{
+		MatlabEngine matEng = null;
+		boolean Found = false;
+
+		while(Found == false)
+		{
+			try
+			{
+				matEng = MatEngines.GetFreeMATEngi();
+				Found = true;
+				consoleLike.append("Found MATLAB Enigne " + matEng.getVariable("MAT") + ".....\n");
+			}
+			catch(Exception ex)
+			{
+				Found = false;
+
+			}
+		}
+		return matEng;
+	}
 	private void close()
 	{
 		try
@@ -85,14 +125,14 @@ public class Client implements Runnable{
 			connectionToClient.close();
 			out.close();
 			in.close();
-			console_Like.append("Closing Client Connection.... \n");
+			consoleLike.append("Closing Client Connection.... \n");
 		}
 		catch (IOException ex)
 		{
 			ex.printStackTrace();
 		}
 	}
-
+	
 	private void sendMessage(String message)
 	{
         try {
@@ -102,6 +142,6 @@ public class Client implements Runnable{
             e.printStackTrace();
         }
 	}
-	*/
+
 	
 }
